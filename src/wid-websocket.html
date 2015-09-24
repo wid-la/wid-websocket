@@ -1,0 +1,152 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../promise-polyfill/promise-polyfill-lite.html">
+
+<!--
+An element providing a solution to no problem in particular.
+
+Example:
+
+    <wid-websocket></wid-websocket>
+
+@group Seed Elements
+@element wid-websocket
+@demo demo/index.html
+@hero hero.svg
+-->
+<dom-module id="wid-websocket">
+
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+  </template>
+
+</dom-module>
+
+<script>
+  (function () {
+
+    Polymer({
+
+      is: 'wid-websocket',
+
+      properties: {
+        url: {
+          type: String
+        },
+
+        auto: {
+          type: Boolean,
+          value: false
+        },
+
+        json: {
+          type: Boolean,
+          value: false
+        },
+
+        _ws: {
+          type: Object
+        },
+
+        _promise: {
+          type: Object
+        }
+      },
+
+      observers: [
+        '_urlChanged(url, auto)'
+      ],
+
+      readyState: function () {
+        if(this._ws) {
+          return this._ws.readyState;
+        }
+        else {
+          return -1;
+        }
+      },
+
+      open: function () {
+        this._connect();
+      }, 
+
+      send: function (data) {
+        if(!this._ws) {
+          throw new Error('wid-websocket.send(...): not connected.');
+        }
+        if(this.json) {
+          data = JSON.stringify(data);
+        }
+        this._promise.then(() => {
+          this._ws.send(data);
+        });
+      },
+
+      close: function (code, reason) {
+        if(this._ws) {
+          this._ws.close(code, reason);
+          this._ws = null;
+        }
+      },
+
+      _urlChanged: function () {
+        if (this.auto) {
+          this._connect();
+        }
+      },
+
+      _connect: function () {
+        if(!this.url) {
+          throw new Error('wid-websocket.connect(...): no url.');
+        }
+        if(this._ws) {
+          throw new Error('wid-websocket.connect(...): already connected.');
+        }
+        
+        this._promise = new Promise((resolve, reject) => {
+          this._ws = new WebSocket(this.url);
+          this._ws.onopen = this._onwsopen.bind(this, resolve);
+          this._ws.onerror = this._onwserror.bind(this, reject);
+          this._ws.onmessage = this._onwsmessage.bind(this);
+          this._ws.onclose = this._onwsclose.bind(this);
+        });
+      },
+
+      _onwsopen: function (cb) {
+        this.fire('open');
+        cb(this.readyState);
+      },
+      
+      _onwserror: function (cb) {
+        this.fire('error');
+        cb(this.readyState);
+      },
+      
+      _onwsmessage: function (event) {
+        var data = event.data;
+        if(this.json) {
+          data = JSON.parse(data);
+        }
+        this.fire('message', { data: data });
+      },
+      
+      _onwsclose: function (event) {
+        this.fire('error', { code: event.code, reason: event.reason });
+      }
+
+    });
+
+  })();
+</script>
