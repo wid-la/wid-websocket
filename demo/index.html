@@ -32,12 +32,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <script>
       
       var app = Polymer.dom(document).querySelector('#app');
-          
+
       window.addEventListener('WebComponentsReady', function() {
         
         var ws = app.$.ws;
-        
-        ws.addEventListener('message', function(e) {
+
+        ws.addEventListener('wid-websocket-message', function(e) {
           console.log(e);
         });
         ws.send({
