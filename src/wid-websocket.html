@@ -37,7 +37,8 @@ Example:
 <script>
   (function () {
 
-    let _ws, _promise; // the websocket is global for the component.
+    let _ws = {}, // map of websockets indexed by the url of the websocket
+        _promises = {}; // we open only one websocket to a server
 
     Polymer({
 
@@ -64,10 +65,9 @@ Example:
       ],
 
       readyState: function () {
-        if(_ws) {
-          return _ws.readyState;
-        }
-        else {
+        if(_ws[this.url]) {
+          return _ws[this.url].readyState;
+        } else {
           return -1;
         }
       },
@@ -77,21 +77,21 @@ Example:
       }, 
 
       send: function (data) {
-        if(!_ws) {
-          throw new Error('wid-websocket.send(...): not connected.');
+        if(!_ws[this.url]) {
+          throw new Error(`wid-websocket.send(...): not connected for ${this.url}.`);
         }
         if(this.json) {
           data = JSON.stringify(data);
         }
-        _promise.then(() => {
-          _ws.send(data);
+        _promises[this.url].then(() => {
+          _ws[this.url].send(data);
         });
       },
 
       close: function (code, reason) {
-        if(_ws) {
-          _ws.close(code, reason);
-          _ws = null;
+        if(_ws[this.url]) {
+          _ws[this.url].close(code, reason);
+          _ws[this.url] = null;
         }
       },
 
@@ -105,26 +105,28 @@ Example:
         if(!this.url) {
           throw new Error('wid-websocket.connect(...): no url.');
         }
-        if(_ws) {
-          throw new Error('wid-websocket.connect(...): already connected.');
+        if(_ws[this.url]) {
+          return this.readyState();
+          // throw new Error(`wid-websocket.connect(...): already connected for ${this.url}.`);
         }
         
-        _promise = new Promise((resolve, reject) => {
-          _ws = new WebSocket(this.url);
-          _ws.onopen = this._onwsopen.bind(this, resolve);
-          _ws.onerror = this._onwserror.bind(this, reject);
-          _ws.onmessage = this._onwsmessage.bind(this);
-          _ws.onclose = this._onwsclose.bind(this);
+        _promises[this.url] = new Promise((resolve, reject) => {
+          let ws = _ws[this.url] = new WebSocket(this.url);
+
+          ws.onopen = this._onwsopen.bind(this, resolve);
+          ws.onerror = this._onwserror.bind(this, reject);
+          ws.onmessage = this._onwsmessage.bind(this);
+          ws.onclose = this._onwsclose.bind(this);
         });
       },
 
       _onwsopen: function (cb) {
-        this.fire('wid-websocket-open');
+        this.fire('open');
         cb(this.readyState);
       },
       
       _onwserror: function (cb) {
-        this.fire('wid-websocket-error');
+        this.fire('error');
         cb(this.readyState);
       },
       
@@ -133,11 +135,11 @@ Example:
         if(this.json) {
           data = JSON.parse(data);
         }
-        this.fire('wid-websocket-message', { data });
+        this.fire('message', { data });
       },
       
       _onwsclose: function (event) {
-        this.fire('wid-websocket-error', { code: event.code, reason: event.reason });
+        this.fire('error', { code: event.code, reason: event.reason });
       }
 
     });

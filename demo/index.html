@@ -22,9 +22,26 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <template is="dom-bind" id="app">
       <wid-websocket
-        id="ws"
+        id="ws1"
         url="ws://echo.websocket.org"
         json
+        on-message="_handleEcho"
+        auto>
+      </wid-websocket>
+
+      <wid-websocket
+        id="ws2"
+        url="ws://echo.websocket.org"
+        json
+        on-message="_handleEcho"
+        auto>
+      </wid-websocket>
+
+      <wid-websocket
+        id="ws3"
+        url="wss://versatile.wid.la/ws"
+        json
+        on-message="_onMessage"
         auto>
       </wid-websocket>
     </template>
@@ -33,15 +50,31 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       
       var app = Polymer.dom(document).querySelector('#app');
 
+      app._handleEcho = function (e) {
+        console.log('echo', e);
+      };
+
+      app._onMessage = function (e) {
+        console.log('message', e);
+      };
+
       window.addEventListener('WebComponentsReady', function() {
         
-        var ws = app.$.ws;
+        var ws1 = app.$.ws1,
+            ws2 = app.$.ws2,
+            ws3 = app.$.ws3;
 
-        ws.addEventListener('wid-websocket-message', function(e) {
-          console.log(e);
-        });
-        ws.send({
+        ws1.send({
           myName: 'Thomas'
+        });
+
+        ws2.send({
+          myName: 'Bob'
+        });
+
+        ws3.send({
+          code: 'authenticate',
+          token: 'xxxxxx'
         });
         
       });
