@@ -10,13 +10,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../promise-polyfill/promise-polyfill-lite.html">
 
 <!--
-An element providing a solution to no problem in particular.
+This element establish a websocket connexion with a server.
+If this element is called several times to connect with the same server.
+Only one websocket is established.
+You could connect to several different servers.
 
 Example:
 
-    <wid-websocket></wid-websocket>
+    <wid-websocket
+      id="ws1"
+      url="ws://echo.websocket.org"
+      json
+      on-message="_handleEcho"
+      auto>
+    </wid-websocket>
 
-@group Seed Elements
+@group Wid
 @element wid-websocket
 @demo demo/index.html
 @hero hero.svg
@@ -30,6 +39,8 @@ Example:
       }
     </style>
   </template>
+
+  <!-- no html needed -->
 
 </dom-module>
 

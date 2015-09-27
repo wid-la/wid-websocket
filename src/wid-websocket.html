@@ -11,13 +11,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../promise-polyfill/promise-polyfill-lite.html">
 
 <!--
-An element providing a solution to no problem in particular.
+This element establish a websocket connexion with a server.
+If this element is called several times to connect with the same server.
+Only one websocket is established.
+You could connect to several different servers.
 
 Example:
 
-    <wid-websocket></wid-websocket>
+    <wid-websocket
+      id="ws1"
+      url="ws://echo.websocket.org"
+      json
+      on-message="_handleEcho"
+      auto>
+    </wid-websocket>
 
-@group Seed Elements
+@group Wid
 @element wid-websocket
 @demo demo/index.html
 @hero hero.svg
@@ -31,6 +40,8 @@ Example:
       }
     </style>
   </template>
+
+  <!-- no html needed -->
 
 </dom-module>
 
@@ -47,15 +58,27 @@ Example:
       is: 'wid-websocket',
 
       properties: {
+        /**
+         * The websocket server url
+         * @type {String}
+         */
         url: {
           type: String
         },
 
+        /**
+         * Whether the component should connect right away to the websocket server if url is specified.
+         * @type {Boolean}
+         */ 
         auto: {
           type: Boolean,
           value: false
         },
 
+        /**
+         * Wheter the data sent and received is JSON
+         * @type {Boolean}
+         */
         json: {
           type: Boolean,
           value: false
@@ -66,6 +89,10 @@ Example:
         '_urlChanged(url, auto)'
       ],
 
+      /**
+       * Return the status of the WS depending on the url of the component.
+       * @return {Number} WS status
+       */
       readyState: function () {
         if(_ws[this.url]) {
           return _ws[this.url].readyState;
@@ -74,10 +101,17 @@ Example:
         }
       },
 
+      /**
+       * Open the websocket connexion
+       */
       open: function () {
         this._connect();
       }, 
 
+      /**
+       * Send data through the websocket. If the websocket is not yet opened. We wait for it.
+       * @param  {Object} data Data to send.
+       */
       send: function (data) {
         if(!_ws[this.url]) {
           throw new Error(`wid-websocket.send(...): not connected for ${this.url}.`);
@@ -90,6 +124,11 @@ Example:
         });
       },
 
+      /**
+       * Close the WS
+       * @param  {Number} code   Code
+       * @param  {String} reason Reason
+       */
       close: function (code, reason) {
         if(_ws[this.url]) {
           _ws[this.url].close(code, reason);
@@ -97,45 +136,68 @@ Example:
         }
       },
 
+      /**
+       * Executed if the url has changed. If auto is true, try to open the websocket
+       */
       _urlChanged: function () {
         if (this.auto) {
           this._connect();
         }
       },
 
+      /**
+       * Connect the websocket to the server
+       */
       _connect: function () {
+
         if(!this.url) {
           throw new Error('wid-websocket.connect(...): no url.');
         }
         if(_ws[this.url]) {
+
           let ws = _ws[this.url];
           ws.addEventListener('open', this._onwsopen.bind(this, noop));
           ws.addEventListener('error', this._onwserror.bind(this, noop));
           ws.addEventListener('message', this._onwsmessage.bind(this));
           ws.addEventListener('close', this._onwsclose.bind(this));
-          return this.readyState();
-        }
-        
-        _promises[this.url] = new Promise((resolve, reject) => {
-          let ws = _ws[this.url] = new WebSocket(this.url);
 
-          ws.addEventListener('open', this._onwsopen.bind(this, resolve));
-          ws.addEventListener('error', this._onwserror.bind(this, reject));
-          ws.addEventListener('message', this._onwsmessage.bind(this));
-          ws.addEventListener('close', this._onwsclose.bind(this));
-        });
+        } else {
+          _promises[this.url] = new Promise((resolve, reject) => {
+
+            let ws = _ws[this.url] = new WebSocket(this.url);
+
+            ws.addEventListener('open', this._onwsopen.bind(this, resolve));
+            ws.addEventListener('error', this._onwserror.bind(this, reject));
+            ws.addEventListener('message', this._onwsmessage.bind(this));
+            ws.addEventListener('close', this._onwsclose.bind(this));
+          });
+
+        }
+
       },
 
+      /**
+       * Executed when the websocket is openend
+       * @param  {Function} cb Callback for promise resolution
+       */
       _onwsopen: function (cb) {
         this.fire('open');
         cb(this.readyState);
       },
       
+      /**
+       * Executed when the websocket has an error
+       * @param  {Function} cb Callback for promise resolution
+       */
       _onwserror: function (cb) {
         this.fire('error');
         cb(this.readyState);
       },
       
+      /**
+       * Executed when the WS receives some data.
+       * @param  {MessageEvent} event Message event
+       */
       _onwsmessage: function (event) {
         var data = event.data;
         if(this.json) {
@@ -143,7 +205,11 @@ Example:
         }
         this.fire('message', { data });
       },
-      
+
+      /**
+       * Executed when the websocket closes
+       * @param  {CloseEvent} event Close Event
+       */
       _onwsclose: function (event) {
         this.fire('error', { code: event.code, reason: event.reason });
       }
