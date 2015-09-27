@@ -40,6 +40,8 @@ Example:
     let _ws = {}, // map of websockets indexed by the url of the websocket
         _promises = {}; // we open only one websocket to a server
 
+    function noop() {}
+
     Polymer({
 
       is: 'wid-websocket',
@@ -106,17 +108,21 @@ Example:
           throw new Error('wid-websocket.connect(...): no url.');
         }
         if(_ws[this.url]) {
+          let ws = _ws[this.url];
+          ws.addEventListener('open', this._onwsopen.bind(this, noop));
+          ws.addEventListener('error', this._onwserror.bind(this, noop));
+          ws.addEventListener('message', this._onwsmessage.bind(this));
+          ws.addEventListener('close', this._onwsclose.bind(this));
           return this.readyState();
-          // throw new Error(`wid-websocket.connect(...): already connected for ${this.url}.`);
         }
         
         _promises[this.url] = new Promise((resolve, reject) => {
           let ws = _ws[this.url] = new WebSocket(this.url);
 
-          ws.onopen = this._onwsopen.bind(this, resolve);
-          ws.onerror = this._onwserror.bind(this, reject);
-          ws.onmessage = this._onwsmessage.bind(this);
-          ws.onclose = this._onwsclose.bind(this);
+          ws.addEventListener('open', this._onwsopen.bind(this, resolve));
+          ws.addEventListener('error', this._onwserror.bind(this, reject));
+          ws.addEventListener('message', this._onwsmessage.bind(this));
+          ws.addEventListener('close', this._onwsclose.bind(this));
         });
       },
 

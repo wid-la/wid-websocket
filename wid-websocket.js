@@ -6,6 +6,8 @@
       // map of websockets indexed by the url of the websocket
   _promises = {}; // we open only one websocket to a server
 
+  function noop() {}
+
   Polymer({
 
     is: 'wid-websocket',
@@ -74,17 +76,21 @@
         throw new Error('wid-websocket.connect(...): no url.');
       }
       if (_ws[this.url]) {
+        var ws = _ws[this.url];
+        ws.addEventListener('open', this._onwsopen.bind(this, noop));
+        ws.addEventListener('error', this._onwserror.bind(this, noop));
+        ws.addEventListener('message', this._onwsmessage.bind(this));
+        ws.addEventListener('close', this._onwsclose.bind(this));
         return this.readyState();
-        // throw new Error(`wid-websocket.connect(...): already connected for ${this.url}.`);
       }
 
       _promises[this.url] = new Promise(function (resolve, reject) {
         var ws = _ws[_this2.url] = new WebSocket(_this2.url);
 
-        ws.onopen = _this2._onwsopen.bind(_this2, resolve);
-        ws.onerror = _this2._onwserror.bind(_this2, reject);
-        ws.onmessage = _this2._onwsmessage.bind(_this2);
-        ws.onclose = _this2._onwsclose.bind(_this2);
+        ws.addEventListener('open', _this2._onwsopen.bind(_this2, resolve));
+        ws.addEventListener('error', _this2._onwserror.bind(_this2, reject));
+        ws.addEventListener('message', _this2._onwsmessage.bind(_this2));
+        ws.addEventListener('close', _this2._onwsclose.bind(_this2));
       });
     },
 
